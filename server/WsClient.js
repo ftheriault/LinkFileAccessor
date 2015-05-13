@@ -6,6 +6,9 @@
 	@author 	Frederic Theriault
 */
 
+var path = require('path')
+var fs = require("fs");
+
 module.exports = WsClient = function(ws) {
 	this.ws = ws;
 
@@ -14,6 +17,12 @@ module.exports = WsClient = function(ws) {
 
 		if (msg.type == "read") {
 			var files = this.scanDirectory(msg.dir, msg.validExtensions, 4);
+			
+			this.send({
+					type : "result",
+					files : files
+				});
+			console.log("-- Finished reading and sending files.");
 		}
 	}
 
@@ -38,27 +47,25 @@ module.exports = WsClient = function(ws) {
 				filesToReturn.push(this.readFileInfo(fullPath));
 			}
 			else if (stats.isDirectory() && depth >= 0) {
-				var tmpArray = this.scanDirectory(fullPath, depth - 1);
+				var tmpArray = this.scanDirectory(fullPath, validExtensions, depth - 1);
 				filesToReturn.concat(tmpArray);
 			}
 		}
+
+		return  filesToReturn;
 	}
 
-	this.fileModified = function(filePath, fileName) {
-		var fileInfo = {};
+	this.readFileInfo = function(filePath, fileName) {
+		data = fs.readFileSync(filePath, {encoding: 'utf-8'});
 
-		fs.readFile(filePath, {encoding: 'utf-8'}, function(err,data){
-			if (!err){
-				fileInfo = {
-					filePath : filePath,
-					fileName : fileName,
-					extension : path.extname(fileName),
-					content : data
-				}; 
-			}else{
-				console.log(err);
-			}
-		});
+		var fileInfo = {
+			filePath : filePath,
+			fileName : fileName,
+			extension : path.extname(fileName),
+			content : data
+		}; 
+
+		console.log(" - Found : " + filePath);
 
 		return fileInfo;
 	}
